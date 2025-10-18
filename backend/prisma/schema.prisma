@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Model for Authentication
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+// Customer Model
+model Customer {
+  id              String   @id @default(uuid())
+  name            String
+  email           String?
+  phone           String
+  address         String?
+  businessName    String?
+  riskScore       Int      @default(0) // 0-100 scale
+  totalCheques    Int      @default(0)
+  bouncedCheques  Int      @default(0)
+  totalAmount     Float    @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cheques         Cheque[]
+  transactions    CashTransaction[]
+
+  @@map("customers")
+}
+
+// Cheque Model
+model Cheque {
+  id              String        @id @default(uuid())
+  chequeNumber    String        @unique
+  amount          Float
+  date            DateTime      // Cheque date
+  bankName        String
+  branchName      String?
+  ifscCode        String?
+  accountNumber   String?
+  status          ChequeStatus  @default(RECEIVED)
+  depositDate     DateTime?
+  clearedDate     DateTime?
+  bouncedDate     DateTime?
+  bounceReason    String?
+  imageUrl        String?
+  notes           String?
+
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@index([date])
+  @@index([depositDate])
+  @@map("cheques")
+}
+
+enum ChequeStatus {
+  RECEIVED
+  DEPOSITED
+  CLEARED
+  BOUNCED
+}
+
+// Cash Transaction Model
+model CashTransaction {
+  id              String              @id @default(uuid())
+  amount          Float
+  type            TransactionType
+  date            DateTime
+  paymentMethod   String?             // Cash, UPI, Card, etc.
+  reference       String?
+  notes           String?
+
+  customerId      String
+  customer        Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([customerId])
+  @@index([date])
+  @@map("cash_transactions")
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
