@@ -5,6 +5,32 @@ interface FetchOptions extends RequestInit {
 }
 
 /**
+ * Get user-friendly error messages based on HTTP status codes
+ */
+function getUserFriendlyErrorMessage(status: number): string {
+  switch (status) {
+    case 400:
+      return 'Invalid request. Please check your input and try again.';
+    case 401:
+      return 'Your session has expired. Please login again.';
+    case 403:
+      return 'You do not have permission to perform this action.';
+    case 404:
+      return 'The requested resource was not found.';
+    case 409:
+      return 'This record already exists. Please check and try again.';
+    case 500:
+      return 'Server error. Please try again later.';
+    case 502:
+    case 503:
+    case 504:
+      return 'Service temporarily unavailable. Please try again in a moment.';
+    default:
+      return 'An unexpected error occurred. Please try again.';
+  }
+}
+
+/**
  * Generalized API client for ALL backend requests
  * Automatically handles:
  * - JSON serialization
@@ -28,15 +54,22 @@ export async function apiClient<T>(
     credentials: 'include', // Always send cookies (for JWT auth)
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  } catch (error) {
+    // Network error or server not reachable
+    throw new Error('Unable to connect to server. Please check your internet connection or try again later.');
+  }
 
   // Handle different response scenarios
   if (!response.ok) {
     // Try to parse error message from backend
     const error = await response.json().catch(() => ({
-      message: `Request failed with status ${response.status}`,
+      message: getUserFriendlyErrorMessage(response.status),
     }));
-    throw new Error(error.message || 'Request failed');
+    throw new Error(error.message || getUserFriendlyErrorMessage(response.status));
   }
 
   // Handle 204 No Content (e.g., DELETE requests)

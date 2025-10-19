@@ -28,7 +28,10 @@ export function RegisterForm() {
       await registerUser(data);
     } catch (error) {
       // Error is handled by AuthContext with toast
-      console.error('Registration error:', error);
+      // Only log in development for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Registration error:', error);
+      }
     } finally {
       setIsLoading(false);
     }

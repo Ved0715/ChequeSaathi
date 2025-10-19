@@ -1,32 +1,151 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { customerAPI, Customer } from '@/lib/api/customers';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Search, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { CreateCustomerDialog } from '@/components/customers/create-customer-dialog';
 
 export default function CustomersPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const response = await customerAPI.getAll({ search, page, limit: 10 });
+      setCustomers(response.customers);
+      setTotalPages(response.pagination.totalPages);
+    } catch (error: any) {
+      // Only log in development for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching customers:', error);
+      }
+      toast.error(error.message || 'Failed to load customers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [search, page]);
+
+  const getRiskBadge = (score: number) => {
+    if (score >= 70) return <Badge variant="destructive">High Risk</Badge>;
+    if (score >= 40) return <Badge className="bg-yellow-500">Medium Risk</Badge>;
+    return <Badge className="bg-green-500">Low Risk</Badge>;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Customers</h1>
-          <p className="text-slate-600">Manage your customer database</p>
+          <h1 className="text-3xl font-bold">Customers</h1>
+          <p className="text-muted-foreground">Manage your customer database</p>
         </div>
-        <Link href="/customers/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Customer
-          </Button>
-        </Link>
+        <CreateCustomerDialog onSuccess={fetchCustomers} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Customer List</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-600">No customers yet. Add your first customer to get started.</p>
-        </CardContent>
-      </Card>
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search customers..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Business</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Risk Score</TableHead>
+              <TableHead>Cheques</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : customers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  No customers found
+                </TableCell>
+              </TableRow>
+            ) : (
+              customers.map((customer) => (
+                <TableRow key={customer.id}>
+                  <TableCell className="font-medium">{customer.name}</TableCell>
+                  <TableCell>{customer.businessName || '-'}</TableCell>
+                  <TableCell>{customer.phone}</TableCell>
+                  <TableCell>{customer.email}</TableCell>
+                  <TableCell>{getRiskBadge(customer.riskScore)}</TableCell>
+                  <TableCell>{customer._count?.cheques || 0}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

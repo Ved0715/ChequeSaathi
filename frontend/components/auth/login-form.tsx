@@ -28,7 +28,10 @@ export function LoginForm() {
       await login(data);
     } catch (error) {
       // Error is handled by AuthContext with toast
-      console.error('Login error:', error);
+      // Only log in development for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Login error:', error);
+      }
     } finally {
       setIsLoading(false);
     }
