@@ -7,6 +7,7 @@ import authRoutes from '@/routes/authRouter';
 import customerRoutes from '@/routes/customerRoutes';
 import chequeRoutes from '@/routes/chequeRoutes';
 import transactionRoutes from '@/routes/transactionRoutes';
+import dashboardRoutes from '@/routes/dashboardRoutes';
 
 // Load environment variables with explicit path
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -41,6 +42,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/cheques', chequeRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.get('/api', (req: Request, res: Response) => {
   res.status(200).json({
     message: 'ChequeSaathi API v1.0',
