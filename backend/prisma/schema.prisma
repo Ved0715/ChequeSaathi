@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")      // Pooled connection for app
+  directUrl = env("DIRECT_URL")        // Direct connection for migrations
 }
 
 // User Model for Authentication
@@ -19,6 +20,15 @@ model User {
   role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  customersCreated      Customer[]        @relation("CustomerCreatedBy")
+  customersUpdated      Customer[]        @relation("CustomerUpdatedBy")
+  chequesCreated        Cheque[]          @relation("ChequeCreatedBy")
+  chequesUpdated        Cheque[]          @relation("ChequeUpdatedBy")
+  transactionsCreated   CashTransaction[] @relation("TransactionCreatedBy")
+  transactionsUpdated   CashTransaction[] @relation("TransactionUpdatedBy")
 
   @@map("users")
 }
@@ -30,23 +40,30 @@ enum UserRole {
 
 // Customer Model
 model Customer {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   name            String
   email           String?
   phone           String
   address         String?
   businessName    String?
-  riskScore       Int      @default(0) // 0-100 scale
-  totalCheques    Int      @default(0)
-  bouncedCheques  Int      @default(0)
-  totalAmount     Float    @default(0)
+  riskScore       Int       @default(0) // 0-100 scale, calculated periodically
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
 
+  // Audit fields
+  createdById     String?
+  createdBy       User?     @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById     String?
+  updatedBy       User?     @relation("CustomerUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  // Relations
   cheques         Cheque[]
   transactions    CashTransaction[]
 
+  @@index([phone])
+  @@index([deletedAt])
   @@map("customers")
 }
 
@@ -55,29 +72,55 @@ model Cheque {
   id              String        @id @default(uuid())
   chequeNumber    String        @unique
   amount          Float
-  date            DateTime      // Cheque date
+  issueDate       DateTime      // Date when cheque was written
+  dueDate         DateTime      // Date when cheque should be deposited/cleared
+
+  // Bank details
   bankName        String
   branchName      String?
   ifscCode        String?
-  accountNumber   String?
+
+  // Drawer details (person/company who wrote the cheque)
+  drawerName      String
+
+  // Payee/Beneficiary
+  payeeName       String?
+
+  // Cheque type and direction
+  chequeType      ChequeType    @default(AT_SIGHT)
+  direction       ChequeDirection @default(RECEIVABLE)
+
+  // Status tracking
   status          ChequeStatus  @default(RECEIVED)
   depositDate     DateTime?
   clearedDate     DateTime?
   bouncedDate     DateTime?
   bounceReason    String?
+
+  // Additional info
   imageUrl        String?
   notes           String?
 
+  // Relations
   customerId      String
   customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  // Audit fields
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  createdById     String?
+  createdBy       User?         @relation("ChequeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById     String?
+  updatedBy       User?         @relation("ChequeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([customerId])
   @@index([status])
-  @@index([date])
+  @@index([issueDate])
+  @@index([dueDate])
   @@index([depositDate])
+  @@index([deletedAt])
   @@map("cheques")
 }
 
@@ -88,28 +131,58 @@ enum ChequeStatus {
   BOUNCED
 }
 
+enum ChequeType {
+  AT_SIGHT      // Regular cheque
+  POST_DATED    // PDC - Post Dated Cheque
+}
+
+enum ChequeDirection {
+  RECEIVABLE    // We receive payment (customer pays us)
+  PAYABLE       // We make payment (we pay customer)
+}
+
 // Cash Transaction Model
 model CashTransaction {
   id              String              @id @default(uuid())
   amount          Float
   type            TransactionType
   date            DateTime
-  paymentMethod   String?             // Cash, UPI, Card, etc.
-  reference       String?
+  paymentMethod   PaymentMethod       @default(CASH)
+  category        String?             // e.g., "Advance", "Settlement", "Refund"
+  reference       String?             // Transaction ID, receipt number, etc.
   notes           String?
 
+  // Relations
   customerId      String
   customer        Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  // Audit fields
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
+  deletedAt       DateTime?
+
+  createdById     String?
+  createdBy       User?               @relation("TransactionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById     String?
+  updatedBy       User?               @relation("TransactionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([customerId])
   @@index([date])
+  @@index([deletedAt])
   @@map("cash_transactions")
 }
 
 enum TransactionType {
-  CREDIT
-  DEBIT
+  CREDIT        // Money received from customer
+  DEBIT         // Money paid to customer
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  NEFT
+  RTGS
+  IMPS
+  CARD
+  OTHER
 }
