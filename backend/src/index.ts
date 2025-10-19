@@ -1,9 +1,12 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import path from 'path';
+import authRoutes from '@/routes/authRouter';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables with explicit path
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -15,6 +18,11 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+app.get('/', (req: Request, res: Response) => {
+  res.send('Welcome to the ChequeSaathi Backend API');
+});
 
 // Health check route
 app.get('/health', (req: Request, res: Response) => {
@@ -24,6 +32,9 @@ app.get('/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Routes
+app.use('/api/auth', authRoutes);
 
 // API routes will be added here
 app.get('/api', (req: Request, res: Response) => {
@@ -47,11 +58,23 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server with error handling
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔑 JWT Secret loaded: ${process.env.JWT_SECRET ? 'Yes' : 'No'}`);
+  console.log(`🗄️  Database URL loaded: ${process.env.DATABASE_URL ? 'Yes' : 'No'}`);
+});
+
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Please choose a different port.`);
+    process.exit(1);
+  } else {
+    console.error('❌ Server error:', error);
+    process.exit(1);
+  }
 });
 
 export default app;

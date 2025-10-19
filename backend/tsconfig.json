@@ -13,7 +13,11 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "declaration": true,
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": "./src",
+    "paths": {
+        "@/*": ["./*"]
+      }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

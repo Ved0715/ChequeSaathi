@@ -11,18 +11,16 @@ datasource db {
   directUrl = env("DIRECT_URL")        // Direct connection for migrations
 }
 
-// User Model for Authentication
+// User Model for Authentication (MVP - No roles, all users have same access)
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String
   name      String
-  role      UserRole @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  deletedAt DateTime?
 
-  // Relations
+  // Relations (Audit trail - track who created/updated records)
   customersCreated      Customer[]        @relation("CustomerCreatedBy")
   customersUpdated      Customer[]        @relation("CustomerUpdatedBy")
   chequesCreated        Cheque[]          @relation("ChequeCreatedBy")
@@ -31,11 +29,6 @@ model User {
   transactionsUpdated   CashTransaction[] @relation("TransactionUpdatedBy")
 
   @@map("users")
-}
-
-enum UserRole {
-  ADMIN
-  USER
 }
 
 // Customer Model
