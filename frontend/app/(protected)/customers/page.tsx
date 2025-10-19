@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateCustomerDialog } from '@/components/customers/create-customer-dialog';
+import { EditCustomerDialog } from '@/components/customers/edit-customer-dialog';
+import { DeleteCustomerDialog } from '@/components/customers/delete-customer-dialog';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -23,6 +25,8 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
 
   const fetchCustomers = async () => {
     try {
@@ -110,10 +114,18 @@ export default function CustomersPage() {
                   <TableCell>{customer._count?.cheques || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditingCustomer(customer)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeletingCustomer(customer)}
+                      >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -146,6 +158,22 @@ export default function CustomersPage() {
           </Button>
         </div>
       )}
+
+      {/* Edit Customer Dialog */}
+      <EditCustomerDialog
+        customer={editingCustomer}
+        open={!!editingCustomer}
+        onOpenChange={(open) => !open && setEditingCustomer(null)}
+        onSuccess={fetchCustomers}
+      />
+
+      {/* Delete Customer Dialog */}
+      <DeleteCustomerDialog
+        customer={deletingCustomer}
+        open={!!deletingCustomer}
+        onOpenChange={(open) => !open && setDeletingCustomer(null)}
+        onSuccess={fetchCustomers}
+      />
     </div>
   );
 }
