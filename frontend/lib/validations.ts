@@ -20,6 +20,23 @@ export const customerSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const chequeSchema = z.object({
+  customerId: z.string().min(1, 'Customer is required'),
+  chequeNumber: z.string().min(1, 'Cheque number is required'),
+  amount: z.number().min(1, 'Amount must be greater than 0'),
+  bankName: z.string().min(2, 'Bank name is required'),
+  branchName: z.string().optional(),
+  ifscCode: z.string().optional(),
+  chequeType: z.enum(['AT_SIGHT', 'POST_DATED']),
+  direction: z.enum(['RECEIVABLE', 'PAYABLE']),
+  drawerName: z.string().min(2, 'Drawer name is required'),
+  payeeName: z.string().min(2, 'Payee name is required'),
+  issueDate: z.string().min(1, 'Issue date is required'),
+  dueDate: z.string().min(1, 'Due date is required'),
+  notes: z.string().optional(),
+});
+
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type CustomerFormData = z.infer<typeof customerSchema>;
+export type ChequeFormData = z.infer<typeof chequeSchema>;
