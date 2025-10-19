@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import authRoutes from '@/routes/authRouter';
+import customerRoutes from '@/routes/customerRoutes';
+import chequeRoutes from '@/routes/chequeRoutes';
 
 // Load environment variables with explicit path
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -35,8 +37,8 @@ app.get('/health', (req: Request, res: Response) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-
-// API routes will be added here
+app.use('/api/customers', customerRoutes);
+app.use('/api/cheques', chequeRoutes);
 app.get('/api', (req: Request, res: Response) => {
   res.status(200).json({
     message: 'ChequeSaathi API v1.0',

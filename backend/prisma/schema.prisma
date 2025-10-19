@@ -63,7 +63,7 @@ model Customer {
 // Cheque Model
 model Cheque {
   id              String        @id @default(uuid())
-  chequeNumber    String        @unique
+  chequeNumber    String
   amount          Float
   issueDate       DateTime      // Date when cheque was written
   dueDate         DateTime      // Date when cheque should be deposited/cleared
@@ -108,6 +108,7 @@ model Cheque {
   updatedById     String?
   updatedBy       User?         @relation("ChequeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
+  @@unique([customerId, chequeNumber])
   @@index([customerId])
   @@index([status])
   @@index([issueDate])
