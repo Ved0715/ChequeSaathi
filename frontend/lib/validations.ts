@@ -36,7 +36,19 @@ export const chequeSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const transactionSchema = z.object({
+  customerId: z.string().min(1, 'Customer is required'),
+  amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  date: z.string().min(1, 'Date is required'),
+  method: z.enum(['CASH', 'UPI', 'NEFT', 'RTGS', 'IMPS', 'CARD', 'OTHER']),
+  type: z.enum(['CREDIT', 'DEBIT']),
+  category: z.string().optional(),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type CustomerFormData = z.infer<typeof customerSchema>;
 export type ChequeFormData = z.infer<typeof chequeSchema>;
+export type TransactionFormData = z.infer<typeof transactionSchema>;

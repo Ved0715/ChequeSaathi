@@ -204,19 +204,22 @@ export const updateTransaction = async (req: AuthRequest, res: Response): Promis
 
     // Prepare update data with date conversion
     const dataToUpdate: any = {
-      ...updateData,
       updatedById: req.user!.id,
     };
 
-    // Map 'method' to 'paymentMethod' for Prisma
-    if (updateData.method) {
-      dataToUpdate.paymentMethod = updateData.method;
-      delete dataToUpdate.method;
-    }
+    // Map fields from request to Prisma schema
+    if (updateData.amount !== undefined) dataToUpdate.amount = updateData.amount;
+    if (updateData.type !== undefined) dataToUpdate.type = updateData.type;
+    if (updateData.method !== undefined) dataToUpdate.paymentMethod = updateData.method;
+    if (updateData.category !== undefined) dataToUpdate.category = updateData.category;
+    if (updateData.reference !== undefined) dataToUpdate.reference = updateData.reference;
+    if (updateData.notes !== undefined) dataToUpdate.notes = updateData.notes;
 
     if (updateData.date) {
       dataToUpdate.date = new Date(updateData.date);
     }
+
+    // Note: customerId is intentionally excluded - transactions cannot be reassigned to different customers
 
     const updatedTransaction = await prisma.cashTransaction.update({
       where: { id },
