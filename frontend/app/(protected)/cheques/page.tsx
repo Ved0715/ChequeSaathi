@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { chequeAPI, Cheque, ChequeStatus, ChequeType, ChequeDirection } from '@/lib/api/cheques';
+import { chequeAPI, Cheque, ChequeStatus } from '@/lib/api/cheques';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search } from 'lucide-react';
+import { Search, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { CreateChequeDialog } from '@/components/cheques/create-cheque-dialog';
+import { EditChequeDialog } from '@/components/cheques/edit-cheque-dialog';
+import { UpdateStatusDialog } from '@/components/cheques/update-status-dialog';
+import { DeleteChequeDialog } from '@/components/cheques/delete-cheque-dialog';
 
 export default function ChequesPage() {
   const [cheques, setCheques] = useState<Cheque[]>([]);
@@ -17,6 +21,35 @@ export default function ChequesPage() {
   const [statusFilter, setStatusFilter] = useState<ChequeStatus | ''>('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [editingCheque, setEditingCheque] = useState<Cheque | null>(null);
+  const [updatingStatusCheque, setUpdatingStatusCheque] = useState<Cheque | null>(null);
+  const [deletingCheque, setDeletingCheque] = useState<Cheque | null>(null);
+
+  useEffect(() => {
+    const fetchCheques = async () => {
+      try {
+        setLoading(true);
+        const response = await chequeAPI.getAll({
+          search,
+          status: statusFilter || undefined,
+          page,
+          limit: 10,
+        });
+        setCheques(response.cheques);
+        setTotalPages(response.pagination.totalPages);
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching cheques:', error);
+        }
+        const message = error instanceof Error ? error.message : 'Failed to load cheques';
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCheques();
+  }, [search, statusFilter, page]);
 
   const fetchCheques = async () => {
     try {
@@ -29,19 +62,16 @@ export default function ChequesPage() {
       });
       setCheques(response.cheques);
       setTotalPages(response.pagination.totalPages);
-    } catch (error: any) {
+    } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('Error fetching cheques:', error);
       }
-      toast.error(error.message || 'Failed to load cheques');
+      const message = error instanceof Error ? error.message : 'Failed to load cheques';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchCheques();
-  }, [search, statusFilter, page]);
 
   const getStatusBadge = (status: ChequeStatus) => {
     const variants = {
@@ -60,10 +90,7 @@ export default function ChequesPage() {
           <h1 className="text-3xl font-bold">Cheques</h1>
           <p className="text-muted-foreground">Manage your cheque registry</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Cheque
-        </Button>
+        <CreateChequeDialog onSuccess={fetchCheques} />
       </div>
 
       <div className="flex items-center gap-4">
@@ -131,9 +158,32 @@ export default function ChequesPage() {
                   </TableCell>
                   <TableCell>{getStatusBadge(cheque.status)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      View
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditingCheque(cheque)}
+                        title="Edit cheque"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setUpdatingStatusCheque(cheque)}
+                        title="Update status"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeletingCheque(cheque)}
+                        title="Delete cheque"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -163,6 +213,30 @@ export default function ChequesPage() {
           </Button>
         </div>
       )}
+
+      {/* Edit Cheque Dialog */}
+      <EditChequeDialog
+        cheque={editingCheque}
+        open={!!editingCheque}
+        onOpenChange={(open) => !open && setEditingCheque(null)}
+        onSuccess={fetchCheques}
+      />
+
+      {/* Update Status Dialog */}
+      <UpdateStatusDialog
+        cheque={updatingStatusCheque}
+        open={!!updatingStatusCheque}
+        onOpenChange={(open) => !open && setUpdatingStatusCheque(null)}
+        onSuccess={fetchCheques}
+      />
+
+      {/* Delete Cheque Dialog */}
+      <DeleteChequeDialog
+        cheque={deletingCheque}
+        open={!!deletingCheque}
+        onOpenChange={(open) => !open && setDeletingCheque(null)}
+        onSuccess={fetchCheques}
+      />
     </div>
   );
 }
