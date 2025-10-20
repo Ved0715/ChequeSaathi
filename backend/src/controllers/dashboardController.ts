@@ -17,6 +17,15 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
     // Get all cheques (not deleted)
     const allCheques = await prisma.cheque.findMany({
       where: { deletedAt: null },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            businessName: true,
+          },
+        },
+      },
     });
 
     // Today's deposits due
@@ -88,16 +97,30 @@ export const getDashboardStats = async (req: AuthRequest, res: Response): Promis
           chequeNumber: c.chequeNumber,
           amount: c.amount,
           dueDate: c.dueDate,
-          customerId: c.customerId,
+          customer: c.customer,
         })),
       },
       pendingClearances: {
         count: pendingClearances.length,
         amount: pendingClearances.reduce((sum, c) => sum + Number(c.amount), 0),
+        cheques: pendingClearances.map((c) => ({
+          id: c.id,
+          chequeNumber: c.chequeNumber,
+          amount: c.amount,
+          depositDate: c.depositDate,
+          customer: c.customer,
+        })),
       },
       next7DaysPipeline: {
         count: next7DaysPipeline.length,
         amount: next7DaysPipeline.reduce((sum, c) => sum + Number(c.amount), 0),
+        cheques: next7DaysPipeline.map((c) => ({
+          id: c.id,
+          chequeNumber: c.chequeNumber,
+          amount: c.amount,
+          dueDate: c.dueDate,
+          customer: c.customer,
+        })),
       },
       statusBreakdown,
       totalAmounts: {
